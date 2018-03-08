@@ -1,0 +1,58 @@
+
+- hosts: '{{ hosts }}'
+  tasks:
+    - name: remove latest data
+      file:
+        path: /tmp/sysbench_output.log
+        state: absent
+
+    - name: install bzr for redhat
+      yum: name='bzr' state=present disable_gpg_check=yes
+      when: ansible_os_family == 'RedHat'
+
+    - name: install libmysqlclient-devel for redhat
+      yum: name='libmysqlclient-devel' state=present disable_gpg_check=yes
+      when: ansible_os_family == 'RedHat'
+
+    - name: install bzr for ubuntu
+      apt: name='bzr' state=present
+      when: ansible_distribution == 'Ubuntu'
+
+    - name: install libmysqlclient-dev for ubuntu
+      apt: name='libmysqlclient-dev' state=present
+      when: ansible_distribution == 'Ubuntu'
+
+    - name: install bzr for CentOS
+      yum: name='bzr' state=present disable_gpg_check=yes
+      when: ansible_distribution == 'CentOS'
+
+    - name: install libmysqlclient-devel for CentOS
+      yum: name='libmysqlclient-devel' state=present disable_gpg_check=yes
+      when: ansible_distribution == 'CentOS'
+
+    - name: install libmysqlclient-devel for SLES
+      zypper: name=libmysqlclient-devel state=present
+      when: ansible_distribution == 'SLES'
+
+    - name: copy bzr for SLES
+      copy: src=bzr-2.5.1-14.el7.aarch64.rpm dest=/tmp/bzr-2.5.1-14.el7.aarch64.rpm mode=0777
+      when: ansible_distribution == 'SLES'
+
+    - name: install bzr for SLES
+      shell: cd /tmp && rpm -ivh bzr-2.5.1-14.el7.aarch64.rpm
+      when: ansible_distribution == 'SLES'
+      ignore_errors: yes
+
+    - name: run sysbench_cpu
+      shell: "cd /tmp/sysbench && ./sysbench_cpu.sh"
+      register: logdata
+      ignore_errors: yes
+
+    - lineinfile: create=yes  dest=/tmp/sysbench_output.log line="{{ logdata.stdout }}" state=present
+
+
+    - name: fetch result
+      fetch:
+        src: /tmp/sysbench_output.log
+        dest: /tmp/sysbench_output.log
+        flat: yes
